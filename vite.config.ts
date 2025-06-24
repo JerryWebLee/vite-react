@@ -1,6 +1,7 @@
 import path from "node:path";
 import { defineConfig, loadEnv } from "vite";
 import { compression } from "vite-plugin-compression2";
+import deadFile from "vite-plugin-deadfile";
 import stylelint from "vite-plugin-stylelint";
 import svgr from "vite-plugin-svgr";
 import react from "@vitejs/plugin-react-swc";
@@ -26,12 +27,23 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-      react(),
+      deadFile({
+        // 要扫描的目录，默认为项目根目录
+        root: "src",
+        // 要排除的文件/目录，基于 root 目录
+        exclude: ["**/*.d.ts", "**/__tests__/**", "**/*.css", "**/*.less"],
+        // 要包含的文件/目录，基于 root 目录
+        include: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.vue", "**/*.svg", "**/*.json"],
+        // 输出文件
+        output: ".deadfiles",
+        // 输出文件夹
+        outputDir: ".",
+      }),
       stylelint({
         fix: true,
         include: ["src/**/*.{css,less}"],
       }),
-      { ...compression(), apply: "build" },
+      react(),
       svgr({
         svgrOptions: {
           // icon: true,
@@ -134,6 +146,7 @@ export default defineConfig(({ mode }) => {
         scale: 1,
         jsx: "react",
       }),
+      { ...compression(), apply: "build" },
     ],
     resolve: {
       alias: {
