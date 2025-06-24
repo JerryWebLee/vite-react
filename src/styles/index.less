@@ -1,0 +1,49 @@
+@layer tailwind-base, antd;
+
+@layer tailwind-base {
+  @tailwind base;
+}
+
+@tailwind components;
+@tailwind utilities;
+
+@import "variables.less";
+@import "normalize.less";
+
+@keyframes rippleGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.text-gradient-ripple {
+  animation: rippleGradient 5s ease infinite;
+  background: linear-gradient(270deg, #185839, #fff176, #cddc39, #0058c7, #795548, #4dd0e1);
+  background-clip: text;
+  background-size: 400% 400%;
+  color: transparent;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root),
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root),
+.dark::view-transition-old(root) {
+  z-index: 9999;
+}

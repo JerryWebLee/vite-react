@@ -1,0 +1,41 @@
+* {
+  box-sizing: border-box;
+  // webkit滚动条样式
+  &::-webkit-scrollbar {
+    height: 7px !important;
+    width: 7px !important;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent !important;
+  }
+
+  // 设置默认滑块的背景色
+  &::-webkit-scrollbar-thumb {
+    background-color: transparent !important;
+  }
+
+  // 设置内容悬浮时滑块的样式
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(15 198 194 / 30%) !important;
+    border-radius: 4px !important;
+  }
+
+  // 设置滑块悬浮时的样式
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(15 198 194 / 50%) !important;
+  }
+}
+
+html,
+body,
+#root {
+  font-size: 16px;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+li {
+  list-style: none;
+}
