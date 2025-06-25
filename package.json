@@ -19,7 +19,8 @@
     "cz": "npm run prepare-scopes && czg",
     "release": "semantic-release --no-ci",
     "prepare": "husky",
-    "cz:release": "npm run cz && npm run release"
+    "cz:release": "npm run cz && npm run release",
+    "preinstall": "node scripts/check-node-version.js"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^1.22.0",
@@ -112,5 +113,8 @@
     "**/*.{md,json}": [
       "prettier --write"
     ]
+  },
+  "engines": {
+    "node": ">=20.8.1"
   }
 }
