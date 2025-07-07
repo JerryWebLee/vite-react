@@ -2,6 +2,12 @@
 
 > 本文档由系统自动生成
 
+# [1.2.0](https://github.com/JerryWebLee/vite-react/compare/v1.1.0...v1.2.0) (2025-07-07)
+
+### ✨ 新增功能
+
+- 添加 react-moveable 和 react-selecto 依赖以支持元素拖拽和选择功能 ([14e3b8e2](https://github.com/JerryWebLee/vite-react/commit/14e3b8e2de5bf6c935dc09688ba08d6cc9935a95))
+
 # [1.1.0](https://github.com/JerryWebLee/vite-react/compare/v1.0.0...v1.1.0) (2025-06-25)
 
 ### ✨ 新增功能
