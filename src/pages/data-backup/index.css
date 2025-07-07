@@ -1,0 +1,130 @@
+.app {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  min-height: 100%;
+  padding: 10px 20px;
+  position: relative;
+  text-align: center;
+}
+
+.container {
+  max-width: 800px;
+}
+
+.cube {
+  background: #eee;
+  border-radius: 5px;
+  display: inline-block;
+  height: 40px;
+  line-height: 40px;
+  margin: 4px;
+  width: 40px;
+
+  --color: #4af;
+}
+
+h1,
+.description {
+  text-align: center;
+}
+
+.button {
+  appearance: none;
+  background: transparent;
+  border: 1px solid #333;
+  box-sizing: border-box;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  height: 42px;
+  letter-spacing: 1px;
+  margin: 0 5px;
+  transition: all ease 0.2s;
+  width: 120px;
+}
+
+.button:hover {
+  background: #333;
+  color: white;
+}
+
+.elements {
+  border: 2px solid #eee;
+  margin-top: 40px;
+}
+
+.selecto-area {
+  padding: 20px;
+}
+
+#selecto1 .cube {
+  transition: all ease 0.2s;
+}
+
+.moveable #selecto1 .cube {
+  transition: none;
+}
+
+.selecto-area .selected {
+  background: var(--color);
+  color: #fff;
+}
+
+.scroll {
+  overflow: auto;
+  padding-top: 10px;
+  user-select: none;
+}
+
+.infinite-viewer,
+.scroll {
+  box-sizing: border-box;
+  height: 300px;
+  width: 100%;
+}
+
+.infinite-viewer .viewport {
+  padding-top: 10px;
+}
+
+.empty.elements {
+  border: none;
+}
+
+.correct {
+  margin: auto;
+  padding: 20px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.correct .target {
+  color: #fff;
+  display: inline-block;
+  height: 100px;
+  line-height: 100px;
+  margin: 10px 20px;
+  position: relative;
+  text-align: center;
+  width: 100px;
+}
+
+.correct svg {
+  height: 100%;
+  left: 0;
+  opacity: 0.9;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transform: translateZ(0);
+  width: 100%;
+}
+
+.correct svg path {
+  fill: transparent;
+  stroke: #333;
+  stroke-width: 2;
+}

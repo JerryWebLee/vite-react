@@ -3,7 +3,7 @@ import { LockOutlined, UserOutlined } from "@ant-design/icons";
 import { useMutation } from "@tanstack/react-query";
 import { Button, Form, type FormProps, Input } from "antd";
 import { ROUTE_PATHS } from "@/constants/common";
-import { clearUserInfo, setUserInfo } from "@/stores";
+import { clearUserInfo, setAccessToken, setUserInfo } from "@/stores";
 import { $navigator } from "@/utils";
 
 import { LoginController } from "@/services";
@@ -28,6 +28,8 @@ export default function LoginForm() {
 
   const onFinish: FormProps<LoginParams>["onFinish"] = (values) => {
     AppLogin.mutate(values);
+    setAccessToken("access_token");
+    $navigator.push("/");
   };
 
   const onFinishFailed: FormProps<LoginParams>["onFinishFailed"] = (errorInfo) => {
