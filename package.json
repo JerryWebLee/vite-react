@@ -20,7 +20,10 @@
     "release": "semantic-release --no-ci",
     "prepare": "husky",
     "cz:release": "npm run cz && npm run release",
-    "preinstall": "node scripts/check-node-version.js"
+    "preinstall": "node scripts/check-node-version.js",
+    "docker:build": "docker build -t vite-react-app:latest .",
+    "docker:scan": "./scripts/security-scan.sh",
+    "docker:build:secure": "npm run docker:build && npm run docker:scan"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^1.22.0",

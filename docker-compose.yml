@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  react-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vite-react-app
+    ports:
+      - "3081:3081"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3081/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+
+  # 开发环境服务（可选）
+  react-app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: vite-react-app-dev
+    ports:
+      - "3081:3081"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+    profiles:
+      - dev
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
