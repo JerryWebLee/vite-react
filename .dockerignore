@@ -59,7 +59,7 @@ Thumbs.db
 
 # Docker文件
 Dockerfile*
-docker-compose*
+docker compose*
 .dockerignore
 
 # CI/CD文件
@@ -72,8 +72,10 @@ docker-compose*
 docs
 *.md
 
-# 脚本
-scripts
+# 脚本（保留 check-node-version.js 需要的文件）
+scripts/*
+!scripts/check-node-version.js
+!scripts/generateScopes.js
 deploy*.sh
 reset-version.sh
 

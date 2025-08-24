@@ -1,5 +1,5 @@
 # 多阶段构建 - 构建阶段
-FROM node:20.20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -12,6 +12,9 @@ COPY package.json pnpm-lock.yaml ./
 
 # 安装pnpm
 RUN npm install -g pnpm@latest
+
+# 复制scripts目录（用于preinstall脚本）
+COPY scripts/ ./scripts/
 
 # 安装依赖
 RUN pnpm install --frozen-lockfile

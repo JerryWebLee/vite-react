@@ -4,7 +4,7 @@
 LOCAL_BUILD_DIR="dist"  # 本地构建目录
 REMOTE_USER="root"                 # 远程服务器用户
 REMOTE_HOST="192.188.4.97"        # 远程服务器地址
-REMOTE_DIR="/root/smartsecurity/nginx/html/smartsecurity/devops"     # 远程服务器部署目录
+REMOTE_DIR="/data/smartsecurity/nginx/html/smartsecurity/devops"     # 远程服务器部署目录
 DOCKER_CONTAINER_NAME="systest-nginx"  # Docker 容器名称
 
 echo "👉 文件打包..."

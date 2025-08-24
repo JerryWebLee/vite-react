@@ -5,11 +5,14 @@ import { at } from "@/utils";
 export function AppHelmet() {
   const matches = useMatches();
   const currRouter = at(matches, -1);
+
+  // 确保 title 是字符串类型
+  const pageTitle = String((currRouter?.handle as any)?.title || "React");
+  const appTitle = String(import.meta.env.VITE_APP_TITLE_SUFFIX || "");
+
   return (
     <Helmet>
-      <title>
-        {(currRouter?.handle as any)?.title || "React"} | {import.meta.env.VITE_APP_TITLE_SUFFIX}
-      </title>
+      <title>{`${pageTitle} | ${appTitle}`}</title>
     </Helmet>
   );
 }

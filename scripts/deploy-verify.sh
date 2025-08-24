@@ -14,10 +14,10 @@ echo "健康检查 URL: $HEALTH_CHECK_URL"
 
 # 检查容器是否运行
 echo "检查容器状态..."
-if ! docker-compose ps $SERVICE_NAME | grep -q "Up"; then
+if ! docker compose ps $SERVICE_NAME | grep -q "Up"; then
     echo "❌ 容器未运行"
     echo "容器状态:"
-    docker-compose ps $SERVICE_NAME
+    docker compose ps $SERVICE_NAME
     exit 1
 fi
 
@@ -35,7 +35,7 @@ for i in $(seq 1 $MAX_RETRIES); do
         if [ $i -eq $MAX_RETRIES ]; then
             echo "❌ 健康检查失败，已达到最大重试次数"
             echo "容器日志:"
-            docker-compose logs --tail=50 $SERVICE_NAME
+            docker compose logs --tail=50 $SERVICE_NAME
             exit 1
         fi
         echo "健康检查失败，等待 $RETRY_INTERVAL 秒后重试..."
@@ -58,7 +58,7 @@ fi
 # 显示最终状态
 echo "=== 部署验证完成 ==="
 echo "服务状态:"
-docker-compose ps $SERVICE_NAME
+docker compose ps $SERVICE_NAME
 echo "最新日志:"
-docker-compose logs --tail=10 $SERVICE_NAME
+docker compose logs --tail=10 $SERVICE_NAME
 echo "✅ 部署验证成功！" 

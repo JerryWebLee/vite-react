@@ -1,0 +1,14 @@
+# 部署配置文件模板
+# 复制此文件为 deploy.config 并修改配置
+
+# 服务器配置
+SERVER_HOST=your-server-ip
+SERVER_USER=your-username
+
+# Docker 配置
+DOCKER_IMAGE=jerryweblee/psylax-fe
+DOCKER_TAG=latest
+
+# 部署配置
+DEPLOY_PORT=3081
+DEPLOY_DIR=/data/deploy 

@@ -6,7 +6,7 @@ export default function Login() {
   return (
     <>
       <Helmet>
-        <title>登录页 | {import.meta.env.VITE_APP_TITLE_SUFFIX}</title>
+        <title>{`登录页 | ${String(import.meta.env.VITE_APP_TITLE_SUFFIX || "")}`}</title>
       </Helmet>
       <Layout className="min-h-screen relative">
         <Layout.Content className="flex">
