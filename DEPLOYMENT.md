@@ -1,262 +1,179 @@
-# 自动部署配置指南
+# 部署配置优化说明
 
-本文档将指导您如何设置自动部署系统，实现代码提交后自动部署到云服务器。
+## 概述
 
-## 方案概述
+本次优化对 GitHub Actions 部署流程进行了全面改进，提升了部署的可靠性、可维护性和监控能力。
 
-我们提供了两种自动部署方案：
+## 主要优化内容
 
-1. **GitHub Actions** - 推荐方案，当代码推送到 main 分支时自动触发部署
-2. **Webhook 部署** - 通过 Webhook 触发部署（可选）
+### 1. GitHub Actions 工作流优化
 
-## 方案1：GitHub Actions 自动部署
+#### 新增功能：
 
-### 1. 服务器环境准备
+- **手动触发部署**：添加了 `workflow_dispatch` 触发器，支持手动触发部署
+- **版本标签管理**：自动生成带时间戳和 Git SHA 的镜像标签
+- **环境配置**：添加了 production 环境配置，包含部署 URL
+- **部署验证**：添加了部署后的验证步骤
+- **通知机制**：添加了部署状态通知
 
-在您的云服务器上运行以下命令：
+#### 改进的错误处理：
 
-```bash
-# 下载服务器初始化脚本
-wget https://raw.githubusercontent.com/JerryWebLee/vite-react/main/scripts/server-setup.sh
-chmod +x server-setup.sh
+- 使用 `set -euo pipefail` 启用严格错误处理
+- 添加了详细的错误日志和状态检查
+- 实现了自动回滚机制
 
-# 运行初始化脚本（需要 root 权限）
-sudo ./server-setup.sh
-```
+### 2. 部署脚本优化
 
-### 2. 生成 SSH 密钥对
+#### `deploy.sh` 改进：
 
-在您的本地机器上生成 SSH 密钥：
+- 支持传递自定义镜像标签
+- 同时维护 `latest` 标签
+- 添加了详细的构建日志
+- 改进了错误处理和状态验证
 
-```bash
-# 生成 SSH 密钥对
-ssh-keygen -t rsa -b 4096 -C "your-email@example.com"
+#### 新增脚本：
 
-# 将公钥复制到服务器
-ssh-copy-id deploy@your-server-ip
-```
+- `scripts/verify-deployment.sh`：部署验证脚本
+- `scripts/rollback.sh`：快速回滚脚本
 
-### 3. 配置 GitHub Secrets
+### 3. Docker Compose 配置优化
 
-在您的 GitHub 仓库中，进入 `Settings` > `Secrets and variables` > `Actions`，添加以下 secrets：
+#### 资源管理：
 
-- `SERVER_HOST`: 您的服务器 IP 地址
-- `SERVER_USERNAME`: `deploy`
-- `SERVER_SSH_KEY`: 您的 SSH 私钥内容（整个文件内容）
-- `SERVER_PORT`: `22`
+- 添加了内存和 CPU 限制
+- 配置了日志轮转
+- 改进了健康检查配置
 
-### 4. 测试部署
+#### 网络配置：
 
-推送代码到 main 分支：
+- 配置了固定的子网
+- 添加了 Traefik 标签支持
 
-```bash
-git add .
-git commit -m "feat: 添加自动部署配置"
-git push origin main
-```
+## 使用方法
 
-GitHub Actions 将自动触发部署流程。
+### 自动部署
 
-## 方案2：Webhook 部署（可选）
-
-如果您希望使用 Webhook 触发部署，可以配置以下内容：
-
-### 1. 创建 Webhook 接收器
-
-```bash
-# 在服务器上创建 webhook 接收器
-sudo mkdir -p /opt/webhook
-sudo chown deploy:deploy /opt/webhook
-```
-
-### 2. 配置 Webhook 脚本
-
-创建 `/opt/webhook/webhook.js`：
-
-```javascript
-const http = require("http");
-const { exec } = require("child_process");
-
-const server = http.createServer((req, res) => {
-  if (req.method === "POST" && req.url === "/deploy") {
-    exec("/opt/vite-react/scripts/deploy.sh", (error, stdout, stderr) => {
-      if (error) {
-        console.error(`部署错误: ${error}`);
-        res.writeHead(500);
-        res.end("部署失败");
-        return;
-      }
-      console.log(`部署成功: ${stdout}`);
-      res.writeHead(200);
-      res.end("部署成功");
-    });
-  } else {
-    res.writeHead(404);
-    res.end("Not Found");
-  }
-});
-
-server.listen(9000, () => {
-  console.log("Webhook 服务器运行在端口 9000");
-});
-```
-
-### 3. 启动 Webhook 服务
-
-```bash
-# 安装 PM2
-npm install -g pm2
-
-# 启动 webhook 服务
-pm2 start /opt/webhook/webhook.js --name webhook
-pm2 save
-pm2 startup
-```
-
-## 部署流程说明
-
-### 自动部署流程
-
-1. **代码推送** → 触发 GitHub Actions
-2. **构建阶段** → 安装依赖、代码检查、构建应用
-3. **部署阶段** → SSH 连接到服务器执行部署脚本
-4. **部署脚本执行**：
-   - 备份当前版本
-   - 拉取最新代码
-   - 安装依赖
-   - 构建应用
-   - 停止旧容器
-   - 构建新 Docker 镜像
-   - 启动新容器
-   - 健康检查
-   - 清理旧镜像和备份
-
-### 回滚机制
-
-如果部署失败，系统会自动回滚到上一个版本：
-
-1. 停止新容器
-2. 恢复备份
-3. 启动旧版本
-4. 发送失败通知
-
-## 监控和维护
-
-### 查看部署状态
-
-```bash
-# 查看容器状态
-docker ps
-
-# 查看容器日志
-docker logs vite-react-app
-
-# 查看部署日志
-tail -f /opt/vite-react/deploy.log
-```
+推送代码到 `main` 分支会自动触发部署流程。
 
 ### 手动部署
 
-```bash
-# 进入项目目录
-cd /opt/vite-react
+1. 在 GitHub 仓库页面，进入 "Actions" 标签
+2. 选择 "Deploy Frontend to Server" 工作流
+3. 点击 "Run workflow" 按钮
+4. 选择分支并点击 "Run workflow"
 
-# 执行部署脚本
-./scripts/deploy.sh production
+### 部署验证
+
+部署完成后，系统会自动执行以下验证：
+
+- 容器状态检查
+- 健康检查（HTTP 200 响应）
+- 端口监听验证
+- 资源使用情况检查
+
+### 回滚操作
+
+如果部署失败，可以手动执行回滚：
+
+```bash
+# 在服务器上执行
+cd /root/deploy
+./scripts/rollback.sh
 ```
 
-### 清理资源
+## 配置要求
 
-```bash
-# 清理 Docker 镜像
-docker image prune -f
+### GitHub Secrets
 
-# 清理备份（保留最近5个）
-cd /opt/backups/vite-react
-ls -t | tail -n +6 | xargs -r rm -rf
-```
+确保以下 secrets 已配置：
+
+- `DOCKER_USERNAME`：Docker Hub 用户名
+- `DOCKER_PASSWORD`：Docker Hub 密码
+- `REMOTE_HOST`：远程服务器 IP 或域名
+- `REMOTE_USER`：SSH 用户名
+- `SSH_PRIVATE_KEY`：SSH 私钥
+
+### 服务器要求
+
+- Docker 和 Docker Compose 已安装
+- 部署目录：`/root/deploy`
+- 端口 3081 可用
+- curl 命令可用（用于健康检查）
+
+## 监控和日志
+
+### 部署日志
+
+- GitHub Actions 提供详细的构建和部署日志
+- 服务器上的 Docker 日志：`docker-compose logs frontend`
+
+### 健康检查
+
+- 自动健康检查：每 30 秒检查一次
+- 手动健康检查：`./scripts/verify-deployment.sh`
+
+### 资源监控
+
+- 内存限制：512MB
+- CPU 限制：0.5 核心
+- 日志轮转：最大 10MB，保留 3 个文件
 
 ## 故障排除
 
 ### 常见问题
 
-1. **SSH 连接失败**
+1. **部署失败**
 
-   - 检查服务器防火墙设置
-   - 确认 SSH 密钥配置正确
-   - 验证 GitHub Secrets 设置
+   - 检查 GitHub Secrets 配置
+   - 查看 GitHub Actions 日志
+   - 验证服务器连接和权限
 
-2. **构建失败**
+2. **健康检查失败**
 
-   - 检查 Node.js 版本（需要 20.x）
-   - 确认 pnpm 已安装
-   - 查看构建日志
-
-3. **容器启动失败**
-
-   - 检查端口是否被占用
+   - 检查容器是否正常运行
    - 查看容器日志
-   - 确认 Docker 服务运行正常
+   - 验证端口是否正确监听
 
-4. **健康检查失败**
-   - 检查应用是否正常启动
-   - 确认端口配置正确
-   - 查看应用日志
+3. **回滚失败**
+   - 确认备份文件存在
+   - 检查网络连接
+   - 验证镜像是否可访问
 
-### 日志查看
+### 调试命令
 
 ```bash
-# GitHub Actions 日志
-# 在 GitHub 仓库的 Actions 页面查看
+# 查看容器状态
+docker-compose ps
 
-# 服务器部署日志
-tail -f /opt/vite-react/deploy.log
+# 查看容器日志
+docker-compose logs frontend
 
-# Docker 容器日志
-docker logs -f vite-react-app
+# 进入容器调试
+docker-compose exec frontend sh
 
-# Nginx 日志
-tail -f /var/log/nginx/access.log
-tail -f /var/log/nginx/error.log
+# 检查网络连接
+curl -v http://localhost:3081/
+
+# 查看资源使用
+docker stats
 ```
+
+## 版本管理
+
+每次部署都会生成唯一的镜像标签，格式为：`YYYYMMDD-HHMMSS-SHORT_SHA`
+
+例如：`20241201-143022-a1b2c3d`
+
+这样可以：
+
+- 追踪每次部署的版本
+- 快速回滚到特定版本
+- 保持部署历史记录
 
 ## 安全考虑
 
-1. **SSH 密钥安全**
-
-   - 使用强密码保护 SSH 密钥
-   - 定期轮换 SSH 密钥
-   - 限制 SSH 访问 IP
-
-2. **服务器安全**
-
-   - 定期更新系统
-   - 配置防火墙规则
-   - 使用 HTTPS 访问
-
-3. **应用安全**
-   - 定期更新依赖包
-   - 扫描安全漏洞
-   - 配置环境变量
-
-## 性能优化
-
-1. **构建优化**
-
-   - 使用 Docker 多阶段构建
-   - 配置构建缓存
-   - 优化依赖安装
-
-2. **部署优化**
-   - 使用增量部署
-   - 配置负载均衡
-   - 优化资源使用
-
-## 联系支持
-
-如果您在设置过程中遇到问题，请：
-
-1. 查看本文档的故障排除部分
-2. 检查 GitHub Actions 日志
-3. 查看服务器部署日志
-4. 提交 Issue 到项目仓库
+- 使用 SSH 密钥认证
+- 限制容器资源使用
+- 定期清理未使用的镜像
+- 日志文件大小限制
+- 健康检查防止服务异常

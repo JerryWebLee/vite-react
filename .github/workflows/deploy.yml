@@ -1,67 +1,182 @@
-name: Deploy to Production
+name: Deploy Frontend to Server
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch: # 允许手动触发
+
+env:
+  DOCKER_IMAGE: jerryweblee/psylax-fe
+  DOCKER_TAG: latest
 
 jobs:
-  build-and-deploy:
+  build-and-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-
+    outputs:
+      image-tag: ${{ steps.build.outputs.image-tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: "20"
-          cache: "npm"
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
+      - name: Generate image tag
+        id: build
+        run: |
+          # 生成带时间戳的标签用于版本管理
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          IMAGE_TAG="${TIMESTAMP}-${SHORT_SHA}"
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "Generated image tag: ${IMAGE_TAG}"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Build and push Docker image
+        run: |
+          chmod +x ./deploy.sh
+          # 传递标签给部署脚本
+          export IMAGE_TAG="${{ steps.build.outputs.image-tag }}"
+          ./deploy.sh "$IMAGE_TAG"
+        shell: bash
 
-      - name: Run linting
-        run: pnpm run lint
-
-      - name: Build application
-        run: pnpm run build
-
-      - name: Build Docker image
-        run: docker build -t vite-react-app:${{ github.sha }} .
-
-      - name: Deploy to server
-        if: github.ref == 'refs/heads/main'
+  deploy-remote:
+    name: Deploy to Remote Server
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment:
+      name: production
+      url: http://${{ secrets.REMOTE_HOST }}:3081
+    steps:
+      - name: Deploy to Remote Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USERNAME }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # 进入项目目录
-            cd /path/to/your/project
+            set -euo pipefail  # 启用严格错误处理
 
-            # 拉取最新代码
-            git pull origin main
+            echo "=== 开始部署流程 ==="
+            echo "部署时间: $(date)"
+            echo "镜像标签: ${{ needs.build-and-push.outputs.image-tag }}"
 
-            # 停止现有容器
-            docker-compose down
+            # 设置变量
+            DEPLOY_DIR="/root/deploy"
+            IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+            SERVICE_NAME="frontend"
 
-            # 构建新镜像
-            docker-compose build --no-cache
+            # 检查部署目录是否存在
+            if [ ! -d "$DEPLOY_DIR" ]; then
+              echo "错误: 部署目录 $DEPLOY_DIR 不存在"
+              exit 1
+            fi
 
-            # 启动新容器
-            docker-compose up -d
+            cd "$DEPLOY_DIR"
+            echo "当前工作目录: $(pwd)"
 
-            # 清理旧镜像
-            docker image prune -f
+            # 备份当前 docker-compose 文件
+            if [ -f "docker-compose.yml" ]; then
+              cp docker-compose.yml docker-compose.yml.backup.$(date +%Y%m%d-%H%M%S)
+              echo "已备份当前 docker-compose.yml"
+            fi
 
-            echo "部署完成！"
+            # 停止当前服务（如果正在运行）
+            echo "停止当前服务..."
+            docker-compose stop $SERVICE_NAME || echo "服务未运行或停止失败"
+
+            # 拉取最新镜像
+            echo "拉取最新镜像..."
+            docker-compose -f docker-compose.yml pull $SERVICE_NAME || {
+              echo "错误: Docker Compose pull 失败"
+              exit 1
+            }
+
+            # 启动新服务
+            echo "启动新服务..."
+            docker-compose -f docker-compose.yml up -d --no-deps $SERVICE_NAME || {
+              echo "错误: Docker Compose up 失败"
+              echo "尝试回滚到备份..."
+              if [ -f "docker-compose.yml.backup.*" ]; then
+                cp docker-compose.yml.backup.* docker-compose.yml
+                docker-compose up -d --no-deps $SERVICE_NAME || {
+                  echo "错误: 回滚也失败了"
+                  exit 1
+                }
+              fi
+              exit 1
+            }
+
+            # 等待服务启动
+            echo "等待服务启动..."
+            sleep 10
+
+            # 健康检查
+            echo "执行健康检查..."
+            for i in {1..6}; do
+              if curl -f http://localhost:3081/ > /dev/null 2>&1; then
+                echo "健康检查通过！"
+                break
+              else
+                echo "健康检查失败，尝试 $i/6..."
+                if [ $i -eq 6 ]; then
+                  echo "错误: 健康检查失败，服务可能未正常启动"
+                  echo "查看容器日志:"
+                  docker-compose logs $SERVICE_NAME
+                  exit 1
+                fi
+                sleep 10
+              fi
+            done
+
+            # 清理未使用的 Docker 镜像
+            echo "清理未使用的 Docker 镜像..."
+            docker image prune -f || echo "镜像清理失败，但继续执行"
+
+            # 显示部署信息
+            echo "=== 部署完成 ==="
+            echo "服务状态:"
+            docker-compose ps $SERVICE_NAME
+            echo "容器日志:"
+            docker-compose logs --tail=20 $SERVICE_NAME
+            echo "部署成功完成！"
+
+      - name: Verify deployment
+        run: |
+          echo "验证部署..."
+          # 等待一段时间让服务完全启动
+          sleep 30
+
+          # 检查服务是否可访问
+          if curl -f http://${{ secrets.REMOTE_HOST }}:3081/ > /dev/null 2>&1; then
+            echo "✅ 部署验证成功！"
+          else
+            echo "❌ 部署验证失败！"
+            exit 1
+          fi
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-remote]
+    if: always()
+    steps:
+      - name: Notify success
+        if: needs.deploy-remote.result == 'success'
+        run: |
+          echo "✅ 部署成功完成！"
+          echo "镜像标签: ${{ needs.build-and-push.outputs.image-tag }}"
+          echo "部署时间: $(date)"
+
+      - name: Notify failure
+        if: needs.deploy-remote.result == 'failure'
+        run: |
+          echo "❌ 部署失败！"
+          echo "请检查 GitHub Actions 日志获取详细信息"
+          exit 1

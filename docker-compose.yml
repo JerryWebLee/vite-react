@@ -1,15 +1,14 @@
 version: "3.8"
 
 services:
-  react-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  frontend:
+    image: jerryweblee/psylax-fe:latest
     container_name: vite-react-app
     ports:
       - "3081:3081"
     environment:
       - NODE_ENV=production
+      - PORT=3081
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3081/"]
@@ -17,28 +16,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - app-network
-
-  # 开发环境服务（可选）
-  react-app-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    container_name: vite-react-app-dev
-    ports:
-      - "3081:3081"
-    volumes:
-      - ./src:/app/src
-      - ./public:/app/public
-    environment:
-      - NODE_ENV=development
-    restart: unless-stopped
-    profiles:
-      - dev
-    networks:
-      - app-network
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.frontend.rule=Host(`psylax.com`)"
+    #   - "traefik.http.services.frontend.loadbalancer.server.port=3081"
 
 networks:
   app-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

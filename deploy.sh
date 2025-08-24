@@ -1,50 +1,53 @@
 #!/bin/bash
+set -euo pipefail  # 启用严格错误处理
 
-# 部署脚本
-set -e
+# 获取传递的镜像标签，如果没有则使用默认值
+IMAGE_TAG=${1:-latest}
+DOCKER_IMAGE="jerryweblee/psylax-fe"
+FULL_IMAGE_NAME="${DOCKER_IMAGE}:${IMAGE_TAG}"
 
-# 配置变量
-IMAGE_NAME="vite-react-app"
-IMAGE_TAG="latest"
-CONTAINER_NAME="vite-react-app"
-PORT="3081"
+echo "=== 开始构建和推送 Docker 镜像 ==="
+echo "镜像名称: $FULL_IMAGE_NAME"
+echo "构建时间: $(date)"
 
-echo "🚀 开始部署 React 应用..."
+# 先构建镜像并打标签
+echo "构建 Docker 镜像..."
+docker build -t "$FULL_IMAGE_NAME" . || {
+  echo "❌ Docker 构建失败"
+  exit 1
+}
 
-# 构建Docker镜像
-echo "📦 构建Docker镜像..."
-docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-
-# 停止并删除旧容器（如果存在）
-echo "🛑 停止旧容器..."
-docker stop ${CONTAINER_NAME} 2>/dev/null || true
-docker rm ${CONTAINER_NAME} 2>/dev/null || true
-
-# 运行新容器
-echo "▶️  启动新容器..."
-docker run -d \
-  --name ${CONTAINER_NAME} \
-  --restart unless-stopped \
-  -p ${PORT}:${PORT} \
-  ${IMAGE_NAME}:${IMAGE_TAG}
-
-# 等待容器启动
-echo "⏳ 等待容器启动..."
-sleep 10
-
-# 检查容器状态
-echo "🔍 检查容器状态..."
-if docker ps | grep -q ${CONTAINER_NAME}; then
-    echo "✅ 容器启动成功！"
-    echo "🌐 应用访问地址: http://localhost:${PORT}"
-else
-    echo "❌ 容器启动失败！"
-    docker logs ${CONTAINER_NAME}
+# 同时打上 latest 标签（如果使用了自定义标签）
+if [ "$IMAGE_TAG" != "latest" ]; then
+  echo "添加 latest 标签..."
+  docker tag "$FULL_IMAGE_NAME" "${DOCKER_IMAGE}:latest" || {
+    echo "❌ 添加 latest 标签失败"
     exit 1
+  }
 fi
 
-# 清理未使用的镜像
-echo "🧹 清理未使用的镜像..."
-docker image prune -f
+# 检查镜像是否存在
+echo "验证构建的镜像..."
+docker images | grep "$DOCKER_IMAGE" | grep "$IMAGE_TAG" || {
+  echo "❌ 构建的镜像不存在"
+  exit 1
+}
 
-echo "🎉 部署完成！" 
+# 推送镜像
+echo "推送镜像到仓库..."
+docker push "$FULL_IMAGE_NAME" || {
+  echo "❌ Docker 推送失败"
+  exit 1
+}
+
+# 如果使用了自定义标签，也推送 latest 标签
+if [ "$IMAGE_TAG" != "latest" ]; then
+  echo "推送 latest 标签..."
+  docker push "${DOCKER_IMAGE}:latest" || {
+    echo "❌ 推送 latest 标签失败"
+    exit 1
+  }
+fi
+
+echo "✅ 镜像构建和推送成功完成！"
+echo "镜像: $FULL_IMAGE_NAME"
