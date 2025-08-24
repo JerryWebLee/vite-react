@@ -12,7 +12,7 @@
 
 - **手动触发部署**：添加了 `workflow_dispatch` 触发器，支持手动触发部署
 - **版本标签管理**：自动生成带时间戳和 Git SHA 的镜像标签
-- **环境配置**：添加了 production 环境配置，包含部署 URL
+- **环境配置**：添加了 production 环境配置
 - **部署验证**：添加了部署后的验证步骤
 - **通知机制**：添加了部署状态通知
 
@@ -35,6 +35,7 @@
 
 - `scripts/verify-deployment.sh`：部署验证脚本
 - `scripts/rollback.sh`：快速回滚脚本
+- `scripts/deploy-verify.sh`：远程部署验证脚本
 
 ### 3. Docker Compose 配置优化
 
@@ -81,6 +82,16 @@ cd /root/deploy
 ./scripts/rollback.sh
 ```
 
+### 手动验证部署
+
+在服务器上执行验证：
+
+```bash
+# 在服务器上执行
+cd /root/deploy
+./scripts/deploy-verify.sh
+```
+
 ## 配置要求
 
 ### GitHub Secrets
@@ -110,7 +121,7 @@ cd /root/deploy
 ### 健康检查
 
 - 自动健康检查：每 30 秒检查一次
-- 手动健康检查：`./scripts/verify-deployment.sh`
+- 手动健康检查：`./scripts/deploy-verify.sh`
 
 ### 资源监控
 
@@ -135,9 +146,15 @@ cd /root/deploy
    - 验证端口是否正确监听
 
 3. **回滚失败**
+
    - 确认备份文件存在
    - 检查网络连接
    - 验证镜像是否可访问
+
+4. **Workflow 语法错误**
+   - 确保 YAML 语法正确
+   - 检查 secrets 使用位置
+   - 验证环境配置
 
 ### 调试命令
 
@@ -156,6 +173,12 @@ curl -v http://localhost:3081/
 
 # 查看资源使用
 docker stats
+
+# 验证部署
+./scripts/deploy-verify.sh
+
+# 执行回滚
+./scripts/rollback.sh
 ```
 
 ## 版本管理
@@ -177,3 +200,29 @@ docker stats
 - 定期清理未使用的镜像
 - 日志文件大小限制
 - 健康检查防止服务异常
+
+## 脚本说明
+
+### deploy.sh
+
+- 构建和推送 Docker 镜像
+- 支持自定义标签
+- 错误处理和日志记录
+
+### scripts/verify-deployment.sh
+
+- 本地部署验证
+- 容器状态检查
+- 健康检查
+
+### scripts/rollback.sh
+
+- 快速回滚到备份版本
+- 自动恢复配置
+- 验证回滚结果
+
+### scripts/deploy-verify.sh
+
+- 远程服务器部署验证
+- 完整的健康检查
+- 资源使用监控
