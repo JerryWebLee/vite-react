@@ -6,7 +6,6 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "./components/error-boundary";
 import App from "./App";
 
-import "@ant-design/v5-patch-for-react-19";
 import "./styles/index.less";
 import "./styles/light.less";
 import "./styles/dark.less";

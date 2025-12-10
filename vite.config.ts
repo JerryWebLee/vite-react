@@ -171,14 +171,7 @@ export default defineConfig(({ mode }) => {
           assetFileNames: "[ext]/[name]-[hash].[ext]",
           manualChunks: {
             react: ["react", "react-dom", "react-router-dom", "zustand", "react-helmet-async"],
-            antd: [
-              "antd",
-              "@ant-design/icons",
-              "@ant-design/cssinjs",
-              "@ant-design/v5-patch-for-react-19",
-              "dayjs",
-              "rc-virtual-list",
-            ],
+            antd: ["antd", "@ant-design/icons", "@ant-design/cssinjs", "dayjs", "rc-virtual-list"],
             axios: ["axios"],
           },
         },
